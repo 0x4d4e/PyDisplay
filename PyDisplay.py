@@ -224,6 +224,17 @@ class PyDisplay:
     def clear(self):
         self.display.clear()
 
-    def message(self, message):
+    def write(self, message):
         for c in message:
             self.display.write(ord(c), True)
+
+    def writeAt(self, line, column, message):
+        if line >= self.num_lines or column >= self.num_cols:
+            return
+
+        self.display.setCursor(line, column)
+        for i, c in enumerate(message):
+            if i + column >= self.num_cols:
+                break
+            self.display.write(ord(c), True)
+
