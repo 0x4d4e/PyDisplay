@@ -86,29 +86,29 @@ class HD44780:
         self.display_mode = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT
 
     def initDisplay(self):
+        # set 4 bit mode
         self.setPin(self.pin_rs, False)
         self.setPin(self.pin_en, False)
 
-        self.write4bit(0x3)
+        self.write4bits(0x3)
         sleepMicroseconds(5000)
 
-        self.write4bit(0x3)
+        self.write4bits(0x3)
         sleepMicroseconds(200)
 
-        self.write4bit(0x3)
+        self.write4bits(0x3)
         sleepMicroseconds(200)
 
-        self.write4bit(0x2)
+        self.write4bits(0x2)
         sleepMicroseconds(5000)
 
-        # should be in 4bit mode now
-
+        # should be in 4bit mode now, set mode & functions
         self.write(LCD_FUNCTIONSET | self.display_function)
 
         self.displayOn()
         self.clear()
 
-        self.write(LCD_ENTRYMODESET | self.display_mode)  # set the entry mode
+        self.write(LCD_ENTRYMODESET | self.display_mode)
 
     def home(self):
         self.write(LCD_RETURNHOME)  # set cursor position to zero
@@ -124,51 +124,43 @@ class HD44780:
             pass
         self.write(LCD_SETDDRAMADDR | (col + LCD_ROWOFFSETS[line]))
 
-    def noDisplay(self):
+    def displayOff(self):
         """ Turn the display off (quickly) """
-
         self.display_control &= ~LCD_DISPLAYON
         self.write(LCD_DISPLAYCONTROL | self.display_control)
 
     def displayOn(self):
         """ Turn the display on (quickly) """
-
         self.display_control |= LCD_DISPLAYON
         self.write(LCD_DISPLAYCONTROL | self.display_control)
 
-    def noCursor(self):
+    def cursorOff(self):
         """ Turns the underline cursor on/off """
-
         self.display_control &= ~LCD_CURSORON
         self.write(LCD_DISPLAYCONTROL | self.display_control)
 
-    def cursor(self):
+    def cursorOn(self):
         """ Cursor On """
-
         self.display_control |= LCD_CURSORON
         self.write(LCD_DISPLAYCONTROL | self.display_control)
 
-    def noBlink(self):
+    def cursorToggleBlink(self):
         """ Turn on and off the blinking cursor """
-
         self.display_control &= ~LCD_BLINKON
         self.write(LCD_DISPLAYCONTROL | self.display_control)
 
-    def DisplayLeft(self):
+    def scrollLeft(self):
         """ These commands scroll the display without changing the RAM """
-
         self.write(
             LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVELEFT)
 
-    def scrollDisplayRight(self):
+    def scrollRight(self):
         """ These commands scroll the display without changing the RAM """
-
         self.write(
             LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVERIGHT)
 
     def leftToRight(self):
         """ This is for text that flows Left to Right """
-
         self.displaymode |= LCD_ENTRYLEFT
         self.write(LCD_ENTRYMODESET | self.displaymode)
 
@@ -177,25 +169,23 @@ class HD44780:
         self.displaymode &= ~LCD_ENTRYLEFT
         self.write(LCD_ENTRYMODESET | self.displaymode)
 
-    def autoscroll(self):
+    def autoscrollOn(self):
         """ This will 'right justify' text from the cursor """
-
         self.displaymode |= LCD_ENTRYSHIFTINCREMENT
         self.write(LCD_ENTRYMODESET | self.displaymode)
 
-    def noAutoscroll(self):
+    def autoscrollOff(self):
         """ This will 'left justify' text from the cursor """
-
         self.displaymode &= ~LCD_ENTRYSHIFTINCREMENT
         self.write(LCD_ENTRYMODESET | self.displaymode)
 
     def write(self, byte, char_mode=False):
         """ Send command/char to LCD """
         self.setPin(self.pin_rs, char_mode)
-        self.write4bit(byte >> 4)
-        self.write4bit(byte)
+        self.write4bits(byte >> 4)
+        self.write4bits(byte)
 
-    def write4bit(self, value):
+    def write4bits(self, value):
         for i in range(4):
             self.setPin(self.pins_db[i], (value >> i) & 0x01)
         self.toggleEnable()
@@ -209,7 +199,7 @@ class HD44780:
         self.setPin(self.pin_en, True)
         sleepMicroseconds(1)        # enable pulse must be > 450ns
         self.setPin(self.pin_en, False)
-        sleepMicroseconds(50)      # commands need > 37us to settle
+        sleepMicroseconds(50)       # commands need > 37us to settle
 
 
 class PyDisplay:
@@ -237,4 +227,3 @@ class PyDisplay:
             if i + column >= self.num_cols:
                 break
             self.display.write(ord(c), True)
-

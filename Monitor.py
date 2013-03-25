@@ -7,9 +7,9 @@ from time import sleep
 
 def b2h(n):
     # http://code.activestate.com/recipes/578019
-    # >>> bytes2human(10000)
+    # >>> bh2(10000)
     # '9.8K'
-    # >>> bytes2human(100001221)
+    # >>> b2h(100001221)
     # '95.4M'
     symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
     prefix = {}
