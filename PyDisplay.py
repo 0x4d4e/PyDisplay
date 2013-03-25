@@ -57,9 +57,9 @@ def sleepMicroseconds(microseconds):
     sleep(microseconds / 1e6)
 
 
-class PiDisplay:
+class HD44780:
 
-    def __init__(self, num_lines=4, num_cols=20, pin_rs=7, pin_en=8, pins_db=[25, 24, 23, 18], GPIO=None):
+    def __init__(self, num_lines, num_cols, pin_rs=7, pin_en=8, pins_db=[25, 24, 23, 18], GPIO=None):
         # Emulate the old behavior of using RPi.GPIO if we haven't been given
         # an explicit GPIO interface to use
         if not GPIO:
@@ -85,9 +85,7 @@ class PiDisplay:
         self.display_control = LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF
         self.display_mode = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT
 
-        self.__initDisplay()
-
-    def __initDisplay(self):
+    def initDisplay(self):
         self.setPin(self.pin_rs, False)
         self.setPin(self.pin_en, False)
 
@@ -192,18 +190,14 @@ class PiDisplay:
         self.write(LCD_ENTRYMODESET | self.displaymode)
 
     def write(self, byte, char_mode=False):
-        """ Send command to LCD """
-
+        """ Send command/char to LCD """
         self.setPin(self.pin_rs, char_mode)
-
         self.write4bit(byte >> 4)
         self.write4bit(byte)
-
 
     def write4bit(self, value):
         for i in range(4):
             self.setPin(self.pins_db[i], (value >> i) & 0x01)
-
         self.toggleEnable()
 
     def setPin(self, pin, state):
@@ -215,19 +209,21 @@ class PiDisplay:
         self.setPin(self.pin_en, True)
         sleepMicroseconds(1)        # enable pulse must be > 450ns
         self.setPin(self.pin_en, False)
-        sleepMicroseconds(100)      # commands need > 37us to settle
-
-    def message(self, text):
-        """ Send string to LCD. Newline wraps to second line"""
-
-        for char in text:
-            if char == '\n':
-                self.write(0xC0)  # next line
-            else:
-                self.write(ord(char), True)
+        sleepMicroseconds(50)      # commands need > 37us to settle
 
 
-if __name__ == '__main__':
-    lcd = PiDisplay()
-    lcd.clear()
-    lcd.message('hello! 1234')
+class PyDisplay:
+
+    def __init__(self, num_lines=4, num_cols=20, display=HD44780):
+        self.num_lines = num_lines
+        self.num_cols = num_cols
+
+        self.display = display(num_lines, num_cols)
+        self.display.initDisplay()
+
+    def clear(self):
+        self.display.clear()
+
+    def message(self, message):
+        for c in message:
+            self.display.write(ord(c), True)
