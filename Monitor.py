@@ -22,16 +22,43 @@ def b2h(n):
     return "%sB" % n
 
 
+class Monitor:
+    def __init__(self, line, column, fmt, funcs):
+        self.line = line
+        self.column = column
+        self.fmt = fmt
+        self.funcs = funcs
+
+    def show(self, lcd):
+        vals = [f() for f in self.funcs]
+        lcd.writeAt(self.line, self.column, self.fmt.format(*vals))
+
+
+class MonitorService:
+    def __init__(self, lcd):
+        self.lcd = lcd
+        self.monitors = []
+
+    def addMonitor(self, monitor):
+        self.monitors.append(monitor)
+
+    def start(self, delay=2.5):
+        while True:
+            for m in self.monitors:
+                m.show(self.lcd)
+
+            sleep(delay)
+
+
 if __name__ == '__main__':
-    lcd = PyDisplay()
-    lcd.writeAt(0, 4, 'RaspberryPi')
-    lcd.writeAt(3, 0, 'wlan0 192.168.1.201')
+    ms = MonitorService(PyDisplay())
 
-    while True:
-        cpu = int(round(cpu_percent(), 0))
-        mem = int(round(phymem_usage()[3], 0))
-        usage = disk_usage('/')
+    # CPU & MEM
+    funcs = [lambda: int(round(cpu_percent(), 0)),
+             lambda: int(round(phymem_usage()[3], 0))]
+    ms.addMonitor(Monitor(0, 0, "CPU {0:>3d}% - MEM {1:>3d}%", funcs))
 
-        lcd.writeAt(1, 0, "CPU {0:>3d}% - MEM {1:>3d}%".format(cpu, mem))
-        lcd.writeAt(2, 0, "'/':   {}/{}".format(b2h(usage.used), b2h(usage.total)))
-        sleep(2.5)
+    funcs = [lambda: b2h(disk_usage('/').used), lambda: b2h(disk_usage('/').total)]
+    ms.addMonitor(Monitor(1, 0, "'/':   {}/{}", funcs))
+
+    ms.start(1)
