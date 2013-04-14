@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 #
 # based on code from Adafruit_CharLCD which is based on lrvick's Raspberry GPIO display code and LiquidCrystal
