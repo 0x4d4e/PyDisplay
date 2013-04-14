@@ -1,64 +1,55 @@
 #!/usr/bin/env python
 
 from PyDisplay import *
-from psutil import cpu_percent, phymem_usage, disk_usage
 from time import sleep
+from daemon import daemon
 
 
-def b2h(n):
-    # http://code.activestate.com/recipes/578019
-    # >>> bh2(10000)
-    # '9.8K'
-    # >>> b2h(100001221)
-    # '95.4M'
-    symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
-    prefix = {}
-    for i, s in enumerate(symbols):
-        prefix[s] = 1 << (i+1)*10
-    for s in reversed(symbols):
-        if n >= prefix[s]:
-            value = float(n) / prefix[s]
-            return '%.1f%s' % (value, s)
-    return "%sB" % n
-
-
-class Monitor:
-    def __init__(self, line, column, fmt, funcs):
+class Output:
+    def __init__(self, line, column, fmt):
         self.line = line
         self.column = column
         self.fmt = fmt
-        self.funcs = funcs
+
+    def show(self, lcd, data):
+        msg = self.fmt.format(**data)
+        lcd.writeAt(self.line, self.column, msg)
+
+
+class Monitor:
+    def __init__(self, sources=[], outputs=[], delay=10):
+        self.outputs = outputs
+        self.sources = sources
+        self.delay = delay
+
+    def addOutput(self, output):
+        self.outputs.append(output)
+
+    def addSource(self, source):
+        self.sources.append(source)
 
     def show(self, lcd):
-        vals = [f() for f in self.funcs]
-        lcd.writeAt(self.line, self.column, self.fmt.format(*vals))
+        data = {}
+        try:
+            for s in self.sources:
+                data.update(s())
+            for o in self.outputs:
+                o.show(lcd, data)
+        except Exception as e:
+            lcd.writeAt(0, 0, 'Exception: {}'.format(str(e)))
 
 
-class MonitorService:
-    def __init__(self, lcd):
-        self.lcd = lcd
-        self.monitors = []
+class MonitorDaemon(daemon):
+    def __init__(self, pidfile, monitors=[]):
+        super().__init__(pidfile)
+        self.monitors = monitors
 
     def addMonitor(self, monitor):
         self.monitors.append(monitor)
 
-    def start(self, delay=2.5):
+    def run(self):
+        lcd = PyDisplay()
         while True:
             for m in self.monitors:
-                m.show(self.lcd)
-
-            sleep(delay)
-
-
-if __name__ == '__main__':
-    ms = MonitorService(PyDisplay())
-
-    # CPU & MEM
-    funcs = [lambda: int(round(cpu_percent(), 0)),
-             lambda: int(round(phymem_usage()[3], 0))]
-    ms.addMonitor(Monitor(0, 0, "CPU {0:>3d}% - MEM {1:>3d}%", funcs))
-
-    funcs = [lambda: b2h(disk_usage('/').used), lambda: b2h(disk_usage('/').total)]
-    ms.addMonitor(Monitor(1, 0, "'/':   {}/{}", funcs))
-
-    ms.start(1)
+                m.show(lcd)
+                sleep(m.delay)
