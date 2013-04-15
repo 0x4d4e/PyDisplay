@@ -18,6 +18,13 @@ class Output:
 
 class Monitor:
     def __init__(self, sources=[], outputs=[], delay=10):
+        """
+        sources - list of functions which are executed for each refresh,
+                  source functions must return dict with values.
+        outputs - list of objects of type Output, handle positioning and
+                  formatting of output strings
+        delay - wait period (in seconds) until refresh/next Monitor shown
+        """
         self.outputs = outputs
         self.sources = sources
         self.delay = delay
@@ -36,7 +43,7 @@ class Monitor:
             for o in self.outputs:
                 o.show(lcd, data)
         except Exception as e:
-            lcd.writeAt(0, 0, 'Exception: {}'.format(str(e)))
+            lcd.writeAt(0, 0, 'Exception: {}'.format(str(e)), 'w')
 
 
 class MonitorDaemon(daemon):
@@ -51,5 +58,6 @@ class MonitorDaemon(daemon):
         lcd = PyDisplay()
         while True:
             for m in self.monitors:
+                lcd.clear()
                 m.show(lcd)
                 sleep(m.delay)
