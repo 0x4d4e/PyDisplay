@@ -9,6 +9,10 @@
 
 from time import sleep
 
+
+__all__ = ['PyDisplay']
+
+
 # commands
 LCD_CLEARDISPLAY = 0x01
 LCD_RETURNHOME = 0x02
@@ -90,6 +94,7 @@ class HD44780:
         self.setPin(self.pin_rs, False)
         self.setPin(self.pin_en, False)
 
+        # 4bit init sequence
         self.write4bits(0x3)
         sleepMicroseconds(5000)
 
@@ -186,14 +191,17 @@ class HD44780:
         self.write4bits(byte)
 
     def write4bits(self, value):
+        """ Write to display in 4bit mode"""
         for i in range(4):
             self.setPin(self.pins_db[i], (value >> i) & 0x01)
         self.toggleEnable()
 
     def setPin(self, pin, state):
+        """ Set pin to given state """
         self.GPIO.output(pin, state)
 
     def toggleEnable(self):
+        """ Toggle enable pin """
         self.setPin(self.pin_en, False)
         sleepMicroseconds(1)        # enable pulse must be > 450ns
         self.setPin(self.pin_en, True)
@@ -203,6 +211,8 @@ class HD44780:
 
 
 class PyDisplay:
+    """ Abstraction layer above 'real' Display; handles text formatting
+        and hides hardware details """
 
     def __init__(self, num_lines=4, num_cols=20, display=HD44780):
         self.num_lines = num_lines
@@ -214,16 +224,39 @@ class PyDisplay:
     def clear(self):
         self.display.clear()
 
+    def home(self):
+        self.display.home()
+
     def write(self, message):
         for c in message:
             self.display.write(ord(c), True)
 
-    def writeAt(self, line, column, message):
+    def writeAt(self, line, column, message, mode='t'):
+        """ line/column - cursor position at start
+            message - text to print
+            mode - how to handle overlong messages:
+                't' = truncate string at line end
+                'w' = wrap to beginning of next line
+                'b' = block wrap, wrap to start column
+        """
         if line >= self.num_lines or column >= self.num_cols:
             return
 
         self.display.setCursor(line, column)
-        for i, c in enumerate(message):
-            if i + column >= self.num_cols:
-                break
+        pos = column
+        for c in message:
+            if pos >= self.num_cols:
+                # how to handle line end
+                line += 1
+                if line >= self.num_lines:
+                    break
+                elif mode == 'w':
+                    pos = 0
+                    self.display.setCursor(line, pos)
+                elif mode == 'b':
+                    pos = column
+                    self.display.setCursor(line, pos)
+                else:
+                    break
+            pos += 1
             self.display.write(ord(c), True)

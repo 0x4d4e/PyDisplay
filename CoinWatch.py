@@ -15,6 +15,7 @@ def getTime():
     now = datetime.now()
     return {'time': now.strftime("%d.%m.%y %H:%M:%S")}
 
+
 def initBitstamp():
     out = [Output(0,3, 'BitStamp Ticker'),
            Output(1,0, 'A:{ask:>6} - B:{bid:>6}'),
@@ -36,7 +37,8 @@ def main():
         elif arg == 'r' or arg == 'restart':
             daemon.restart()
         else:
-            print('Unkown argument "{}". \nUse without argument or d(aemonize)|k(ill)|r(estart).'.format(arg))
+            print('Unkown argument "{}".\n'
+                  'Use without argument or d(aemonize)|k(ill)|r(estart).'.format(arg))
             sys.exit(2)
     else:
         # don't daemonize
